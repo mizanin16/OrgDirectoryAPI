@@ -1,12 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, ConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str
     API_KEY: str
 
-    class Config:
-        env_file = ".env"
+    model_config = ConfigDict(env_file=".env")
 
 # Создаем экземпляр настроек
-settings = Settings()alembic upgrade head
-
+settings = Settings()

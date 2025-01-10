@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 
@@ -21,11 +21,11 @@ class BuildingUpdate(BaseModel):
 class BuildingResponse(BuildingBase):
     id: int
     organizations: Optional[List[int]] = []
+    organizations_count: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
     def __init__(self, **data):
         super().__init__(**data)
-        if not self.organizations:
-            self.organizations = None
+        self.organizations_count = len(data.get("organizations", []))

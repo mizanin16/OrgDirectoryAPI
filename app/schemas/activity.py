@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 
@@ -20,12 +20,14 @@ class ActivityResponse(ActivityBase):
     id: int
     children: Optional[List[int]] = []
     organizations: Optional[List[int]] = []
+    organizations_count: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
     def __init__(self, **data):
         super().__init__(**data)
+        self.organizations_count = len(data.get("organizations", []))
         if not self.children:
             self.children = None
         if not self.organizations:

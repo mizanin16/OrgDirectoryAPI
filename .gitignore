@@ -1,6 +1,8 @@
 # ==========================
 # Python Project .gitignore
 # ==========================
+to_test_db.py
+test_main.http
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

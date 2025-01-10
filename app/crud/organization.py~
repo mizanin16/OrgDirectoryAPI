@@ -1,38 +1,51 @@
 from sqlalchemy.orm import Session
-from app.models.building import Building
-from app.schemas.building import BuildingCreate, BuildingUpdate
+from app.models.organization import Organization
+from app.models.building import Building  # Убедитесь, что модель Building подключена
+from app.schemas.organization import OrganizationCreate
 
 
-class CRUDBuilding:
-    def get(self, db: Session, building_id: int):
-        return db.query(Building).filter(Building.id == building_id).first()
-
-    def get_all(self, db: Session, skip: int = 0, limit: int = 10):
-        return db.query(Building).offset(skip).limit(limit).all()
-
-    def create(self, db: Session, building_data: BuildingCreate):
-        building = Building(**building_data.dict())
-        db.add(building)
-        db.commit()
-        db.refresh(building)
-        return building
-
-    def update(self, db: Session, building_id: int, building_data: BuildingUpdate):
-        building = self.get(db, building_id)
-        if not building:
-            return None
-        for key, value in building_data.dict(exclude_unset=True).items():
-            setattr(building, key, value)
-        db.commit()
-        db.refresh(building)
-        return building
-
-    def delete(self, db: Session, building_id: int):
-        building = self.get(db, building_id)
-        if building:
-            db.delete(building)
-            db.commit()
-        return building
+def get_organization_crud(db: Session, org_id: int):
+    return db.query(Organization).filter(Organization.id == org_id).first()
 
 
-crud_building = CRUDBuilding()
+def get_organizations_crud(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(Organization).offset(skip).limit(limit).all()
+
+
+def create_organization_crud(db: Session, org: OrganizationCreate):
+    # Проверяем существование здания
+    building = db.query(Building).filter(Building.id == org.building_id).first()
+    if not building:
+        raise ValueError(f"Building with id {org.building_id} does not exist")
+
+    new_org = Organization(**org.model_dump())
+    db.add(new_org)
+    db.commit()
+    db.refresh(new_org)
+    return new_org
+
+
+def update_organization_crud(db: Session, org_id: int, org_data: OrganizationCreate):
+    org = get_organization_crud(db, org_id)
+    if not org:
+        return None
+
+    # Проверяем существование здания
+    building = db.query(Building).filter(Building.id == org_data.building_id).first()
+    if not building:
+        raise ValueError(f"Building with id {org_data.building_id} does not exist")
+
+    for key, value in org_data.model_dump().items():
+        setattr(org, key, value)
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+def delete_organization_crud(db: Session, org_id: int):
+    org = get_organization_crud(db, org_id)
+    if not org:
+        return None
+    db.delete(org)
+    db.commit()
+    return org
