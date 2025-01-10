@@ -1,0 +1,12 @@
+import asyncpg
+import asyncio
+
+async def main():
+    try:
+        conn = await asyncpg.connect(user='test', password='test', database='organization_db', host='localhost')
+        print("Connection successful!")
+        await conn.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+asyncio.run(main())

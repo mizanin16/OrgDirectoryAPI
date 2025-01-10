@@ -8,7 +8,7 @@ organization_activity = Table(
     "organization_activity",
     Base.metadata,
     Column("organization_id", Integer, ForeignKey("organizations.id"), primary_key=True),
-    Column("activity_id", Integer, ForeignKey("activities.id"), primary_key=True, nullable=True),
+    Column("activity_id", Integer, ForeignKey("activities.id"), primary_key=True),
 )
 
 

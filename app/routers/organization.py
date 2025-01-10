@@ -5,17 +5,9 @@ from app.crud.organization import (
     create_organization, update_organization, delete_organization
 )
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
-from app.core.db import SessionLocal
+from app.core.dependencies import get_db
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.post("/", response_model=OrganizationResponse)
