@@ -1,12 +1,21 @@
-from pydantic import ConfigDict  # Импортируйте ConfigDict из pydantic
-from pydantic_settings import BaseSettings  # Импортируйте BaseSettings из pydantic_settings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
+
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    API_KEY: str
+    DATABASE_URL: str = "postgresql://test:test@localhost:5432/organization_db"
+    TEST_DATABASE_URL: str = "postgresql://test:test@localhost:5432/test_organization_db"
 
-    # Используйте ConfigDict вместо Config
-    model_config = ConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,  # Делаем нечувствительным к регистру
+        extra="ignore"  # Игнорируем лишние переменные окружения
+    )
 
-# Создаем экземпляр настроек
-settings = Settings()
+# Создаем кэшированный экземпляр настроек
+@lru_cache()
+def get_settings():
+    return Settings()
+
+settings = get_settings()

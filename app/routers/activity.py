@@ -1,52 +1,91 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.core.dependencies import get_db
+from typing import List
 from app.schemas.activity import ActivityCreate, ActivityUpdate, ActivityResponse
-from app.crud.activity import (
-    get_activity_crud,
-    get_all_activities_crud,
-    create_activity_crud,
-    update_activity_crud,
-    delete_activity_crud,
+from app.crud.activity import ActivityCRUD
+from app.core.dependencies import get_db
+
+router = APIRouter(
+    prefix="/activities",
+    tags=["Activities"],
 )
 
-router = APIRouter(prefix="/activities", tags=["activities"])
 
+@router.get("/", response_model=List[ActivityResponse])
+async def get_all_activities(db: Session = Depends(get_db)):
+    """
+    Получить список всех видов деятельности.
 
-@router.get("/", response_model=list[ActivityResponse])
-def get_activities(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    activities = get_all_activities_crud(db, skip, limit)
-    for activity in activities:
-        activity.organizations_count = len(activity.organizations)  # Подсчет
+    :param db: Сессия базы данных.
+    :return: Список видов деятельности.
+    """
+    activities = ActivityCRUD.get_all(db)
     return activities
 
 
+@router.get("/hierarchy", response_model=List[ActivityResponse])
+async def get_activities_hierarchy(db: Session = Depends(get_db)):
+    """
+    Получить иерархический список видов деятельности.
+
+    :param db: Сессия базы данных.
+    :return: Иерархический список видов деятельности.
+    """
+    return ActivityCRUD.get_hierarchy(db)
+
+
 @router.get("/{activity_id}", response_model=ActivityResponse)
-def get_activity_by_id(activity_id: int, db: Session = Depends(get_db)):
-    activity = get_activity_crud(db, activity_id)
+async def get_activity(activity_id: int, db: Session = Depends(get_db)):
+    """
+    Получить информацию о виде деятельности по его ID.
+
+    :param activity_id: Уникальный идентификатор вида деятельности.
+    :param db: Сессия базы данных.
+    :return: Вид деятельности.
+    """
+    activity = ActivityCRUD.get(db, activity_id)
     if not activity:
-        raise HTTPException(status_code=404, detail="Activity not found")
+        raise HTTPException(status_code=404, detail="Вид деятельности не найден")
     return activity
 
 
 @router.post("/", response_model=ActivityResponse)
-def create_new_activity(activity_data: ActivityCreate, db: Session = Depends(get_db)):
-    return create_activity_crud(db, activity_data)
+async def create_activity(activity: ActivityCreate, db: Session = Depends(get_db)):
+    """
+    Создать новый вид деятельности.
+
+    :param activity: Данные для создания вида деятельности.
+    :param db: Сессия базы данных.
+    :return: Созданный вид деятельности.
+    """
+    return ActivityCRUD.create(db, activity)
 
 
 @router.put("/{activity_id}", response_model=ActivityResponse)
-def update_existing_activity(
-        activity_id: int, activity_data: ActivityUpdate, db: Session = Depends(get_db)
-):
-    activity = update_activity_crud(db, activity_id, activity_data)
-    if not activity:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    return activity
+async def update_activity(activity_id: int, activity: ActivityUpdate, db: Session = Depends(get_db)):
+    """
+    Обновить данные вида деятельности.
+
+    :param activity_id: Уникальный идентификатор вида деятельности.
+    :param activity: Обновленные данные вида деятельности.
+    :param db: Сессия базы данных.
+    :return: Обновленный вид деятельности.
+    """
+    updated_activity = ActivityCRUD.update(db, activity_id, activity)
+    if not updated_activity:
+        raise HTTPException(status_code=404, detail="Вид деятельности не найден")
+    return updated_activity
 
 
-@router.delete("/{activity_id}")
-def delete_existing_activity(activity_id: int, db: Session = Depends(get_db)):
-    activity = delete_activity_crud(db, activity_id)
-    if not activity:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    return {"detail": "Activity deleted successfully"}
+@router.delete("/{activity_id}", response_model=dict)
+async def delete_activity(activity_id: int, db: Session = Depends(get_db)):
+    """
+    Удалить вид деятельности по ID.
+
+    :param activity_id: Уникальный идентификатор вида деятельности.
+    :param db: Сессия базы данных.
+    :return: Сообщение об успешном удалении.
+    """
+    if not ActivityCRUD.delete(db, activity_id):
+        raise HTTPException(status_code=404, detail="Вид деятельности не найден")
+    return {"detail": "Вид деятельности успешно удалён"}

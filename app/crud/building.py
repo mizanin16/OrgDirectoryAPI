@@ -1,38 +1,82 @@
+from typing import Type
+
 from sqlalchemy.orm import Session
 from app.models.building import Building
 from app.schemas.building import BuildingCreate, BuildingUpdate
 
 
-def get_building_crud(db: Session, building_id: int):
-    return db.query(Building).filter(Building.id == building_id).first()
+class BuildingCRUD:
+    """
+    CRUD-класс для работы с сущностью Building.
+    """
 
+    @staticmethod
+    def get_all(db: Session):
+        """
+        Получить список всех зданий.
 
-def get_all_buildings_crud(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(Building).offset(skip).limit(limit).all()
+        :param db: Сессия базы данных.
+        :return: Список всех зданий.
+        """
+        return db.query(Building).all()
 
+    @staticmethod
+    def create(db: Session, building_data: BuildingCreate) -> Building:
+        """
+        Создать новое здание.
 
-def create_building_crud(db: Session, building_data: BuildingCreate):
-    building = Building(**building_data.model_dump())
-    db.add(building)
-    db.commit()
-    db.refresh(building)
-    return building
+        :param db: Сессия базы данных.
+        :param building_data: Данные для создания здания.
+        :return: Созданное здание.
+        """
+        new_building = Building(**building_data.dict())
+        db.add(new_building)
+        db.commit()
+        db.refresh(new_building)
+        return new_building
 
+    @staticmethod
+    def get(db: Session, building_id: int) -> Building | None:
+        """
+        Получить здание по ID.
 
-def update_building_crud(db: Session, building_id: int, building_data: BuildingUpdate):
-    building = get_building_crud(db, building_id)
-    if not building:
-        return None
-    for key, value in building_data.model_dump(exclude_unset=True).items():
-        setattr(building, key, value)
-    db.commit()
-    db.refresh(building)
-    return building
+        :param db: Сессия базы данных.
+        :param building_id: Уникальный идентификатор здания.
+        :return: Здание или None.
+        """
+        return db.query(Building).filter(Building.id == building_id).first()
 
+    @staticmethod
+    def update(db: Session, building_id: int, building_data: BuildingUpdate) -> Type[Building] | None:
+        """
+        Обновить данные здания.
 
-def delete_building_crud(db: Session, building_id: int):
-    building = get_building_crud(db, building_id)
-    if building:
+        :param db: Сессия базы данных.
+        :param building_id: Уникальный идентификатор здания.
+        :param building_data: Обновленные данные здания.
+        :return: Обновленное здание или None.
+        """
+        building = db.query(Building).filter(Building.id == building_id).first()
+        if not building:
+            return None
+        for key, value in building_data.dict(exclude_unset=True).items():
+            setattr(building, key, value)
+        db.commit()
+        db.refresh(building)
+        return building
+
+    @staticmethod
+    def delete(db: Session, building_id: int) -> bool:
+        """
+        Удалить здание по ID.
+
+        :param db: Сессия базы данных.
+        :param building_id: Уникальный идентификатор здания.
+        :return: True, если здание удалено, иначе False.
+        """
+        building = db.query(Building).filter(Building.id == building_id).first()
+        if not building:
+            return False
         db.delete(building)
         db.commit()
-    return building
+        return True

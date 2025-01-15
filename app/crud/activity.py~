@@ -1,0 +1,80 @@
+from sqlalchemy.orm import Session
+from app.models.activity import Activity
+from app.schemas.activity import ActivityCreate, ActivityUpdate
+
+
+class ActivityCRUD:
+    """
+    CRUD-класс для работы с сущностью "Activity".
+    """
+
+    @staticmethod
+    def get_all(db: Session):
+        """
+        Возвращает все виды деятельности из базы данных.
+
+        :param db: Сессия базы данных.
+        :return: Список объектов Activity.
+        """
+        return db.query(Activity).all()
+
+    @staticmethod
+    def get_by_id(db: Session, activity_id: int):
+        """
+        Возвращает вид деятельности по его ID.
+
+        :param db: Сессия базы данных.
+        :param activity_id: Уникальный идентификатор вида деятельности.
+        :return: Объект Activity или None, если не найден.
+        """
+        return db.query(Activity).filter(Activity.id == activity_id).first()
+
+    @staticmethod
+    def create(db: Session, activity_data: ActivityCreate):
+        """
+        Создает новый вид деятельности.
+
+        :param db: Сессия базы данных.
+        :param activity_data: Данные для создания нового вида деятельности.
+        :return: Созданный объект Activity.
+        """
+        new_activity = Activity(**activity_data.dict())
+        db.add(new_activity)
+        db.commit()
+        db.refresh(new_activity)
+        return new_activity
+
+    @staticmethod
+    def update(db: Session, activity_id: int, activity_data: ActivityUpdate):
+        """
+        Обновляет данные существующего вида деятельности.
+
+        :param db: Сессия базы данных.
+        :param activity_id: Уникальный идентификатор вида деятельности.
+        :param activity_data: Обновленные данные вида деятельности.
+        :return: Обновленный объект Activity или None, если не найден.
+        """
+        activity = db.query(Activity).filter(Activity.id == activity_id).first()
+        if not activity:
+            return None
+        for key, value in activity_data.dict(exclude_unset=True).items():
+            setattr(activity, key, value)
+        db.commit()
+        db.refresh(activity)
+        return activity
+
+    @staticmethod
+    def delete(db: Session, activity_id: int):
+        """
+        Удаляет вид деятельности по его ID.
+
+        :param db: Сессия базы данных.
+        :param activity_id: Уникальный идентификатор вида деятельности.
+        :return: True, если вид деятельности успешно удален, иначе False.
+        """
+        activity = db.query(Activity).filter(Activity.id == activity_id).first()
+        if not activity:
+            return False
+        db.delete(activity)
+        db.commit()
+        return True

@@ -1,62 +1,80 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from typing import List
 from app.schemas.building import BuildingCreate, BuildingUpdate, BuildingResponse
-from app.crud.building import (
-    create_building_crud,
-    update_building_crud,
-    delete_building_crud,
-    get_all_buildings_crud,
-    get_building_crud
-)
+from app.crud.building import BuildingCRUD
 from app.core.dependencies import get_db
-from typing import Optional
 
-router = APIRouter(prefix="/buildings", tags=["buildings"])
+router = APIRouter(
+    prefix="/buildings",
+    tags=["Buildings"],
+)
 
 
-@router.get("/", response_model=list[BuildingResponse])
-def get_buildings(
-        skip: int = 0,
-        limit: int = 10,
-        has_organizations: Optional[bool] = None,
-        sort_by: Optional[str] = None,
-        db: Session = Depends(get_db),
-):
-    buildings = get_all_buildings_crud(db, skip, limit)
-    if has_organizations is not None:
-        buildings = [
-            b for b in buildings if bool(b.organizations) == has_organizations
-        ]
-    if sort_by:
-        if sort_by == "address":
-            buildings = sorted(buildings, key=lambda x: x.address)
+@router.get("/", response_model=List[BuildingResponse])
+async def get_all_buildings(db: Session = Depends(get_db)):
+    """
+    Получить список всех зданий.
+
+    :param db: Сессия базы данных.
+    :return: Список зданий.
+    """
+    buildings = BuildingCRUD.get_all(db)
     return buildings
 
 
-@router.get("/{building_id}", response_model=BuildingResponse)
-def get_building(building_id: int, db: Session = Depends(get_db)):
-    building = get_building_crud(db, building_id)
-    if not building:
-        raise HTTPException(status_code=404, detail="Building not found")
-    return building
-
-
 @router.post("/", response_model=BuildingResponse)
-def create_building(building_data: BuildingCreate, db: Session = Depends(get_db)):
-    return create_building_crud(db, building_data)
+async def create_building(building: BuildingCreate, db: Session = Depends(get_db)):
+    """
+    Создать новое здание.
+
+    :param building: Данные для создания здания.
+    :param db: Сессия базы данных.
+    :return: Созданное здание.
+    """
+    return BuildingCRUD.create(db, building)
+
+
+@router.get("/{building_id}", response_model=BuildingResponse)
+async def get_building(building_id: int, db: Session = Depends(get_db)):
+    """
+    Получить информацию о здании по его ID.
+
+    :param building_id: Уникальный идентификатор здания.
+    :param db: Сессия базы данных.
+    :return: Информация о здании.
+    """
+    building = BuildingCRUD.get(db, building_id)
+    if not building:
+        raise HTTPException(status_code=404, detail="Здание не найдено")
+    return building
 
 
 @router.put("/{building_id}", response_model=BuildingResponse)
-def update_building(building_id: int, building_data: BuildingUpdate, db: Session = Depends(get_db)):
-    building = update_building_crud(db, building_id, building_data)
-    if not building:
-        raise HTTPException(status_code=404, detail="Building not found")
-    return building
+async def update_building(building_id: int, building: BuildingUpdate, db: Session = Depends(get_db)):
+    """
+    Обновить данные здания.
+
+    :param building_id: Уникальный идентификатор здания.
+    :param building: Обновленные данные здания.
+    :param db: Сессия базы данных.
+    :return: Обновленное здание.
+    """
+    updated_building = BuildingCRUD.update(db, building_id, building)
+    if not updated_building:
+        raise HTTPException(status_code=404, detail="Здание не найдено")
+    return updated_building
 
 
-@router.delete("/{building_id}")
-def delete_building(building_id: int, db: Session = Depends(get_db)):
-    building = delete_building_crud(db, building_id)
-    if not building:
-        raise HTTPException(status_code=404, detail="Building not found")
-    return {"detail": "Building deleted successfully"}
+@router.delete("/{building_id}", response_model=dict)
+async def delete_building(building_id: int, db: Session = Depends(get_db)):
+    """
+    Удалить здание по ID.
+
+    :param building_id: Уникальный идентификатор здания.
+    :param db: Сессия базы данных.
+    :return: Сообщение об успешном удалении.
+    """
+    if not BuildingCRUD.delete(db, building_id):
+        raise HTTPException(status_code=404, detail="Здание не найдено")
+    return {"detail": "Здание успешно удалено"}
