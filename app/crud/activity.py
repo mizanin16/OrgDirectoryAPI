@@ -54,7 +54,7 @@ class ActivityCRUD:
         :param activity_data: Данные для создания вида деятельности.
         :return: Созданный вид деятельности.
         """
-        new_activity = Activity(**activity_data.dict())
+        new_activity = Activity(**activity_data.model_dump())
         db.add(new_activity)
         db.commit()
         db.refresh(new_activity)
@@ -84,7 +84,7 @@ class ActivityCRUD:
         activity = db.query(Activity).filter(Activity.id == activity_id).first()
         if not activity:
             return None
-        for key, value in activity_data.dict(exclude_unset=True).items():
+        for key, value in activity_data.model_dump(exclude_unset=True).items():
             setattr(activity, key, value)
         db.commit()
         db.refresh(activity)

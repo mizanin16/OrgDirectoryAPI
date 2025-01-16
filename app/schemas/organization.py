@@ -20,5 +20,5 @@ class OrganizationResponse(OrganizationBase):
 
 class OrganizationUpdate(OrganizationBase):
     name: Optional[str] = None
-    phone_numbers: Optional[str] = None
+    phone_numbers: Optional[List[str]] = None
     building_id: Optional[int] = None

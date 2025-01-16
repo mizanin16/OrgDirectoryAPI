@@ -1,12 +1,9 @@
 from typing import List, Optional, Type
 
 from sqlalchemy.orm import Session
-
-from app.models import Organization
 from app.models.organization import Organization
 from app.schemas.organization import OrganizationCreate, OrganizationUpdate
-from geopy.distance import geodesic
-
+from geopy.
 
 class OrganizationCRUD:
     """
@@ -21,7 +18,7 @@ class OrganizationCRUD:
             latitude: Optional[float] = None,
             longitude: Optional[float] = None,
             radius: Optional[float] = None,
-    ) -> list[Type[Organization]]:
+    ) -> List[Organization]:
         """
         Получить список организаций с фильтрацией.
 
@@ -40,7 +37,8 @@ class OrganizationCRUD:
             query = query.filter(Organization.activity_id == activity_id)
         if latitude and longitude and radius:
             organizations = query.all()
-            return [org for org in organizations if
+            return [
+                org for org in organizations if
                 geodesic((latitude, longitude), (org.building.latitude, org.building.longitude)).km <= radius
             ]
         return query.all()

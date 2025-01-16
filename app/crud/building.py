@@ -29,7 +29,7 @@ class BuildingCRUD:
         :param building_data: Данные для создания здания.
         :return: Созданное здание.
         """
-        new_building = Building(**building_data.dict())
+        new_building = Building(**building_data.model_dump())
         db.add(new_building)
         db.commit()
         db.refresh(new_building)
@@ -59,7 +59,7 @@ class BuildingCRUD:
         building = db.query(Building).filter(Building.id == building_id).first()
         if not building:
             return None
-        for key, value in building_data.dict(exclude_unset=True).items():
+        for key, value in building_data.model_dump(exclude_unset=True).items():
             setattr(building, key, value)
         db.commit()
         db.refresh(building)

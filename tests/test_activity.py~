@@ -38,4 +38,4 @@ def test_update_activity(client: TestClient, test_activity):
 def test_delete_activity(client: TestClient, test_activity):
     response = client.delete(f"/activities/{test_activity.id}")
     assert response.status_code == 200
-    assert response.json() == {"detail": 'Вид деятельности успешно удалён'}
+    assert response.json() == {"detail": "Активность успешно удалена"}  # Учитываем локализацию
