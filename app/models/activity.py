@@ -8,19 +8,14 @@ class Activity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    parent_id = Column(Integer, ForeignKey("activities.id"))
+    parent_id = Column(Integer, ForeignKey("activities.id", ondelete="CASCADE"))
 
-    # Самоссылающиеся связи
-    children = relationship(
-        "Activity",
-        back_populates="parent",
-        remote_side=[id],
-        cascade="all, delete"
-    )
+    # Определяем отношение many-to-one с родителем
     parent = relationship(
         "Activity",
-        back_populates="children",
-        uselist=False
+        remote_side=[id],
+        backref="children",
+        cascade="all, delete"
     )
 
     # Связь с организациями

@@ -1,107 +1,41 @@
-from typing import List, Optional, Type
-
-from sqlalchemy.orm import Session
-
-from app.models import Organization
+from loguru import logger
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy.sql import or_
+from typing import List, Type
 from app.models.organization import Organization
-from app.schemas.organization import OrganizationCreate, OrganizationUpdate
-from geopy.distance import geodesic
+from app.models.activity import Activity
+from .base import BaseCRUD
 
 
-class OrganizationCRUD:
-    """
-    CRUD-класс для работы с сущностью Organization.
-    """
+class OrganizationCRUD(BaseCRUD[Organization]):
+    def __init__(self):
+        super().__init__(Organization)
 
-    @staticmethod
-    def get_filtered(
-            db: Session,
-            name: Optional[str] = None,
-            activity_id: Optional[int] = None,
-            latitude: Optional[float] = None,
-            longitude: Optional[float] = None,
-            radius: Optional[float] = None,
-    ) -> list[Type[Organization]]:
-        """
-        Получить список организаций с фильтрацией.
+    def search_by_name(self, db: Session, name: str) -> list[Type[Organization]]:
+        logger.info("Поиск организаций по имени: {name}", name=name)
+        return db.query(self.model).filter(self.model.name.ilike(f"%{name}%")).all()
 
-        :param db: Сессия базы данных.
-        :param name: Название организации.
-        :param activity_id: ID вида деятельности.
-        :param latitude: Широта для поиска.
-        :param longitude: Долгота для поиска.
-        :param radius: Радиус поиска.
-        :return: Список организаций.
-        """
-        query = db.query(Organization)
-        if name:
-            query = query.filter(Organization.name.ilike(f"%{name}%"))
-        if activity_id:
-            query = query.filter(Organization.activity_id == activity_id)
-        if latitude and longitude and radius:
-            organizations = query.all()
-            return [org for org in organizations if
-                geodesic((latitude, longitude), (org.building.latitude, org.building.longitude)).km <= radius
-            ]
-        return query.all()
+    def get_organizations_by_activity(self, db: Session, activity_id: int) -> List[Type[Organization]]:
+        logger.info("Получение организаций по виду деятельности ID: {activity_id}", activity_id=activity_id)
 
-    @staticmethod
-    def get(db: Session, organization_id: int) -> Organization | None:
-        """
-        Получить организацию по ID.
+        # Создаем алиас для самоссылающейся таблицы
+        # Явно указать связь между родительскими и дочерними элементами таблицы activities
+        child_activities = aliased(Activity)
 
-        :param db: Сессия базы данных.
-        :param organization_id: Уникальный идентификатор организации.
-        :return: Организация или None.
-        """
-        return db.query(Organization).filter(Organization.id == organization_id).first()
+        # Получаем ID всех связанных дочерних деятельностей
+        child_ids = (
+            db.query(Activity.id)
+            .join(child_activities, child_activities.parent_id == Activity.id, isouter=True)
+            .filter(or_(Activity.id == activity_id, child_activities.parent_id == activity_id))
+            .all()
+        )
 
-    @staticmethod
-    def create(db: Session, organization_data: OrganizationCreate) -> Organization:
-        """
-        Создать новую организацию.
+        # Извлекаем ID для фильтрации
+        child_ids = [item[0] for item in child_ids]
 
-        :param db: Сессия базы данных.
-        :param organization_data: Данные для создания организации.
-        :return: Созданная организация.
-        """
-        new_organization = Organization(**organization_data.model_dump())
-        db.add(new_organization)
-        db.commit()
-        db.refresh(new_organization)
-        return new_organization
-
-    @staticmethod
-    def update(db: Session, organization_id: int, organization_data: OrganizationUpdate) -> Type[Organization] | None:
-        """
-        Обновить данные организации.
-
-        :param db: Сессия базы данных.
-        :param organization_id: Уникальный идентификатор организации.
-        :param organization_data: Обновленные данные организации.
-        :return: Обновленная организация или None.
-        """
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
-        if not organization:
-            return None
-        for key, value in organization_data.model_dump(exclude_unset=True).items():
-            setattr(organization, key, value)
-        db.commit()
-        db.refresh(organization)
-        return organization
-
-    @staticmethod
-    def delete(db: Session, organization_id: int) -> bool:
-        """
-        Удалить организацию по ID.
-
-        :param db: Сессия базы данных.
-        :param organization_id: Уникальный идентификатор организации.
-        :return: True, если организация удалена, иначе False.
-        """
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
-        if not organization:
-            return False
-        db.delete(organization)
-        db.commit()
-        return True
+        return (
+            db.query(self.model)
+            .join(self.model.activities)  # Присоединяем таблицу activities через связь
+            .filter(Activity.id.in_(child_ids))  # Фильтруем по ID родителя и детей
+            .all()
+        )

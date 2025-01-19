@@ -3,64 +3,58 @@ from app.core.db import SessionLocal
 from app.models.building import Building
 from app.models.organization import Organization
 from app.models.activity import Activity
+from faker import Faker
+import random
 
+# Указываем локальность для генерации русских данных
+fake = Faker('ru_RU')
 
-def seed_data(db: Session):
-    # Добавляем здания
+def seed_data(db: Session, num_buildings: int, num_activities: int, num_organizations: int):
+    # Генерация зданий
     buildings = [
-        Building(address="г. Москва, ул. Ленина 1, офис 3", latitude=55.7558, longitude=37.6173),
-        Building(address="г. Санкт-Петербург, ул. Блюхера 32/1", latitude=59.9343, longitude=30.3351),
-        Building(address="г. Новосибирск, пр. Дзержинского, 10", latitude=55.0302, longitude=82.9204),
+        Building(
+            address=fake.address(),
+            latitude=fake.latitude(),
+            longitude=fake.longitude()
+        ) for _ in range(num_buildings)
     ]
     db.add_all(buildings)
     db.commit()
-    # todo: сделать чтобы добавление в БД происходило без конкретного указания id parent, а указать просто имя
-    # Добавляем виды деятельности (древовидная структура)
+
+    # Генерация видов деятельности
     activities = [
-        Activity(name="Еда"),
-        Activity(name="Мясная продукция", parent_id=1),
-        Activity(name="Молочная продукция", parent_id=1),
-        Activity(name="Автомобили"),
-        Activity(name="Грузовые", parent_id=4),
-        Activity(name="Легковые", parent_id=4),
-        Activity(name="Запчасти", parent_id=6),
-        Activity(name="Аксессуары", parent_id=6),
+        Activity(name=fake.word()) for _ in range(num_activities)
     ]
     db.add_all(activities)
     db.commit()
 
-    # Добавляем организации
+    # Генерация организаций
     organizations = [
         Organization(
-            name="ООО 'Рога и Копыта'",
-            phone_numbers=["2-222-222", "3-333-333", "8-923-666-13-13"],
-            building_id=buildings[1].id,
-        ),
-        Organization(
-            name="Магазин 'Молочные продукты'",
-            phone_numbers=["8-800-555-35-35"],
-            building_id=buildings[0].id,
-        ),
-        Organization(
-            name="Автосервис 'Грузовичок'",
-            phone_numbers=["8-800-777-88-88"],
-            building_id=buildings[2].id,
-        ),
+            name=fake.company(),
+            phone_numbers=[fake.phone_number() for _ in range(random.randint(1, 3))],
+            building_id=random.choice(buildings).id  # Привязываем к случайному зданию
+        ) for _ in range(num_organizations)
     ]
     db.add_all(organizations)
     db.commit()
 
     # Привязываем виды деятельности к организациям
-    activities[1].organizations.append(organizations[0])  # Мясная продукция -> ООО 'Рога и Копыта'
-    activities[2].organizations.append(organizations[1])  # Молочная продукция -> Магазин 'Молочные продукты'
-    activities[4].organizations.append(organizations[2])  # Грузовые -> Автосервис 'Грузовичок'
-    db.commit()
+    for org in organizations:
+        # Привязываем случайные виды деятельности к организации
+        assigned_activities = random.sample(activities, k=random.randint(1, len(activities)))
+        org.activities.extend(assigned_activities)
 
+    db.commit()
 
 if __name__ == "__main__":
     db = SessionLocal()
     try:
-        seed_data(db)
+        num_buildings = 5  # Задайте количество зданий
+        num_activities = 10  # Задайте количество видов деятельности
+        num_organizations = 15  # Задайте количество организаций
+
+        seed_data(db, num_buildings, num_activities, num_organizations)
         print("База данных успешно заполнена тестовыми данными!")
     except Exception as e:
         print(f"Ошибка при заполнении базы данных: {e}")

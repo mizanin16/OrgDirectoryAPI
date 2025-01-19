@@ -51,4 +51,4 @@ def test_update_building(client: TestClient, test_building):
 def test_delete_building(client: TestClient, test_building):
     response = client.delete(f"/buildings/{test_building.id}")
     assert response.status_code == 200
-    assert response.json() == {"detail": "Здание успешно удалено"}  # Исправлено под локализацию
+    assert response.json() == {"message": "Item deleted successfully"}  # Исправлено под локализацию

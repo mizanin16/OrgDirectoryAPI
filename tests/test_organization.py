@@ -52,4 +52,4 @@ def test_update_organization(client: TestClient, test_organization):
 def test_delete_organization(client: TestClient, test_organization):
     response = client.delete(f"/organizations/{test_organization.id}")
     assert response.status_code == 200
-    assert response.json() == {"detail": "Организация успешно удалена"}  # Исправлено под локализацию
+    assert response.json() == {"message": "Item deleted successfully"}  # Исправлено под локализацию

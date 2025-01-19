@@ -1,11 +1,10 @@
 from loguru import logger
-from geopy.distance import geodesic
-
 from typing import List, Type
 from .base import BaseCRUD
 from sqlalchemy.orm import Session, joinedload
-from app.schemas.building import BuildingResponse
+
 from app.models.building import Building
+from geopy.distance import geodesic
 
 
 class BuildingCRUD(BaseCRUD[Building]):
